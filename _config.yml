@@ -1,0 +1,19 @@
+# Site settings
+title: Your Site Title
+description: Your site description
+
+# Build settings
+markdown: kramdown
+
+# Exclude directories and files from being processed by Jekyll
+exclude:
+  - Codingguruinfo_bot/
+  - .venv/
+  - venv/
+  - .idea/
+  - *.pyc
+  - __pycache__/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
