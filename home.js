@@ -766,7 +766,7 @@ function navigateToHome() {
   updateActiveNavItem('home');
 }
 
-// Navigate to specific view
+// Function to navigate to specific view
 function navigateToView(view) {
   console.log(`Navigating to ${view} view`);
   
@@ -814,7 +814,7 @@ function updateActiveNavItem(view) {
   });
 }
 
-// Hide all pages
+// Function to hide all pages
 function hideAllPages() {
   const pages = document.querySelectorAll('.page');
   pages.forEach(page => {
