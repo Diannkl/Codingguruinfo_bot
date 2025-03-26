@@ -11,7 +11,7 @@ exclude:
   - .venv/
   - venv/
   - .idea/
-  - *.pyc
+  - "*.pyc"
   - __pycache__/
   - Gemfile
   - Gemfile.lock
