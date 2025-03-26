@@ -1,0 +1,101 @@
+:root {
+    --primary-color: #5E81AC;
+    --secondary-color: #88C0D0;
+    --success-color: #A3BE8C;
+    --error-color: #BF616A;
+    --background-color: #ECEFF4;
+    --text-color: #2E3440;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+#app {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.flashcard {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    margin: 20px 0;
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    box-sizing: border-box;
+    transition: transform 0.6s;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.card-front {
+    background-color: var(--primary-color);
+    color: white;
+    z-index: 2;
+}
+
+.card-back {
+    background-color: white;
+    transform: rotateY(180deg);
+    overflow-y: auto;
+}
+
+.flashcard.flipped .card-front {
+    transform: rotateY(180deg);
+}
+
+.flashcard.flipped .card-back {
+    transform: rotateY(0deg);
+    z-index: 3;
+}
+
+.illustration img {
+    max-width: 150px;
+    max-height: 150px;
+}
+
+.code-snippet {
+    width: 100%;
+    background-color: #3B4252;
+    color: #D8DEE9;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 15px 0;
+    overflow-x: auto;
+    font-family: 'Fira Code', monospace;
+}
+
+.practice-btn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.practice-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: scale(1.05);
+} 

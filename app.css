@@ -1,0 +1,88 @@
+/* General app styles */
+:root {
+    --primary-color: #5E81AC;
+    --secondary-color: #88C0D0;
+    --success-color: #A3BE8C;
+    --error-color: #BF616A;
+    --background-color: #ECEFF4;
+    --text-color: #2E3440;
+    --card-background: #FFFFFF;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    padding-bottom: 70px; /* Space for bottom navigation */
+}
+
+.dark-theme {
+    --background-color: #2E3440;
+    --text-color: #ECEFF4;
+    --card-background: #3B4252;
+}
+
+/* Bottom Navigation */
+.bottom-navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: var(--card-background);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex: 1;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+}
+
+.nav-item.active {
+    opacity: 1;
+    color: var(--primary-color);
+}
+
+.nav-icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.nav-label {
+    font-size: 12px;
+}
+
+/* Loading and Empty States */
+.loading, .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #4C566A;
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    #app {
+        max-width: 768px;
+        margin: 0 auto;
+    }
+    
+    .bottom-navigation {
+        max-width: 768px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+} 
