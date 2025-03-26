@@ -93,4 +93,30 @@ function initUserData(userId, firstName, username) {
             // Load main app
             loadMainMenu();
         });
-} 
+}
+
+// Check if running in Telegram WebApp
+function initTelegramWebApp() {
+    console.log('Initializing Telegram WebApp');
+    
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        console.log('Telegram WebApp available');
+        
+        tg.ready();
+        tg.expand();
+        
+        // You can access user data if needed
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            console.log('User data available:', tg.initDataUnsafe.user);
+        }
+        
+        return true;
+    } else {
+        console.warn('Telegram WebApp not available, running in standalone mode');
+        return false;
+    }
+}
+
+// Call this function when your app initializes
+document.addEventListener('DOMContentLoaded', initTelegramWebApp); 

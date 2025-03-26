@@ -1,30 +1,28 @@
 // Main JavaScript file for the app
 
+// Add at the beginning of your main.js file
+console.log('Main.js loaded');
+
+// Add before initializing any major components
+console.log('Initializing app components');
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Telegram WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Expand the WebApp to take full height
-        
-        // Initialize your app with the Telegram instance
-        initApp(tg);
-    } else {
-        console.error('Telegram WebApp is not available');
-        // Fallback for testing outside of Telegram
-        initApp(null);
-    }
-});
-
-function initApp(telegramWebApp) {
-    // Store the Telegram WebApp instance globally if needed
-    window.telegramWebApp = telegramWebApp;
+    // Initialize Firebase (make sure firebase-config.js is loaded before this)
+    initializeFirebase();
     
-    // Initialize your app components
-    loadHomePage();
+    // Initialize Telegram WebApp integration
+    initializeTelegramWebApp();
+    
+    // Load data from Telegram Storage first (for offline capability)
+    loadDataFromTelegramStorage();
+    
+    // Set up navigation
     setupNavigation();
-    initializeFirebase(); // Ensure Firebase is initialized
-}
+    
+    // Default to home screen
+    loadHomeScreen();
+});
 
 // Initialize Firebase Analytics
 function initializeFirebase() {
@@ -193,6 +191,7 @@ function loadView(view) {
 
 // Handle main button click
 function handleMainButtonClick() {
+    // Get the current active view
     const activeView = document.querySelector('.nav-item.active').dataset.view;
     
     switch (activeView) {
@@ -243,36 +242,8 @@ function loadProfileScreen() {
     // In a complete implementation, we would load user data and render the profile
 }
 
-function navigateToSection(sectionId) {
-    console.log(`Navigating to section: ${sectionId}`); // Debug log
-    
-    // Hide all sections
-    const sections = document.querySelectorAll('.section-container');
-    sections.forEach(section => {
-        section.style.display = 'none';
-    });
-    
-    // Show the selected section
-    const targetSection = document.getElementById(`${sectionId}-container`);
-    if (targetSection) {
-        targetSection.style.display = 'block';
-        
-        // Load content based on section
-        switch(sectionId) {
-            case 'home':
-                loadHomePage();
-                break;
-            case 'study-plan':
-                loadStudyPlan();
-                break;
-            case 'progress':
-                loadProgress();
-                break;
-            case 'profile':
-                loadProfile();
-                break;
-        }
-    } else {
-        console.error(`Section container #${sectionId}-container not found`); // Debug log
-    }
+// Add in your button click handlers
+function handleGetStartedClick() {
+    console.log('Get Started button clicked');
+    // Your existing code
 } 

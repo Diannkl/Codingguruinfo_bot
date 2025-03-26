@@ -1,3 +1,12 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+
+# Ignore Python virtual environments
+venv/
+.venv/
+
+# Ignore IDE specific files
+.idea/
+*.pyc
+__pycache__/
