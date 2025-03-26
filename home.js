@@ -232,4 +232,35 @@ function getActivityIcon(type) {
         default:
             return '📌';
     }
+}
+
+function setupHomeEvents() {
+    const getStartedBtn = document.getElementById('get-started-button');
+    if (getStartedBtn) {
+        getStartedBtn.addEventListener('click', function() {
+            console.log('Get Started button clicked'); // Debug log
+            // Your action here - e.g., navigate to study plan
+            navigateToSection('study-plan');
+        });
+    } else {
+        console.error('Get Started button not found'); // Debug log
+    }
+}
+
+function loadHomePage() {
+    console.log('Loading home page'); // Debug log
+    const homeContainer = document.getElementById('home-container');
+    if (homeContainer) {
+        // Populate home content
+        homeContainer.innerHTML = `
+            <div class="welcome-section">
+                <h1>Welcome to Coding Guru</h1>
+                <p>Start your coding journey today</p>
+                <button id="get-started-button" class="primary-button">Get Started</button>
+            </div>
+        `;
+        setupHomeEvents(); // Attach event listeners
+    } else {
+        console.error('Home container not found'); // Debug log
+    }
 } 
