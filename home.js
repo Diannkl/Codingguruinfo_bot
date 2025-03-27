@@ -61,6 +61,96 @@ function loadHomeScreen() {
         });
 }
 
+// Streak management functionality
+function updateUserStreak() {
+  console.log('Updating user streak...');
+  
+  // Get the current date
+  const currentDate = new Date();
+  const today = currentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  
+  // Get last login date from localStorage
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const lastLoginDate = userData.lastLoginDate || '';
+  
+  // Check if this is the first login
+  if (!lastLoginDate) {
+    console.log('First login detected. Starting streak at 1.');
+    userStreak = 1;
+  } 
+  // Check if the user logged in yesterday (to maintain streak)
+  else {
+    const yesterday = new Date(currentDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // If last login was yesterday, increment streak
+    if (lastLoginDate === yesterdayStr) {
+      console.log('Consecutive login detected. Incrementing streak.');
+      userStreak = (userData.streak || 0) + 1;
+    } 
+    // If last login was today, maintain streak
+    else if (lastLoginDate === today) {
+      console.log('Already logged in today. Maintaining streak.');
+      userStreak = userData.streak || 0;
+    }
+    // If last login was before yesterday, reset streak
+    else {
+      console.log('Login streak broken. Resetting to 1.');
+      userStreak = 1;
+    }
+  }
+  
+  // Update userData with new streak and today's date
+  userData.streak = userStreak;
+  userData.lastLoginDate = today;
+  userData.points = userData.points || 0;
+  
+  // Award points for maintaining streak
+  if (userStreak > 1) {
+    const streakPoints = 10 * userStreak; // Points scale with streak length
+    userData.points += streakPoints;
+    userPoints = userData.points;
+    
+    // Show streak milestone messages
+    if (userStreak % 7 === 0) { // Weekly milestone
+      showToast(`🔥 ${userStreak} day streak! +${streakPoints} bonus points!`);
+    } else {
+      showToast(`🔥 Streak day ${userStreak}! +${streakPoints} points`);
+    }
+  }
+  
+  // Save updated user data
+  localStorage.setItem('userData', JSON.stringify(userData));
+  
+  // Update Firebase if available
+  updateUserStreakInFirebase(userStreak, userData.points, today);
+  
+  // Update UI
+  updateUIWithUserData();
+}
+
+// Update streak data in Firebase
+function updateUserStreakInFirebase(streak, points, lastLoginDate) {
+  // If Firebase is initialized
+  if (typeof database !== 'undefined') {
+    const userId = getUserId();
+    
+    // Update streak data in Firebase
+    database.ref(`users/${userId}/stats`).update({
+      streakDays: streak,
+      points: points,
+      lastLoginDate: lastLoginDate
+    }).then(() => {
+      console.log('Streak data updated in Firebase');
+    }).catch(error => {
+      console.error('Error updating streak in Firebase:', error);
+    });
+  } else {
+    console.log('Firebase not initialized, skipping remote streak update');
+  }
+}
+
 // Calculate progress ring offset based on streak days
 function calculateProgressRingOffset(streakDays) {
     const maxDays = 30; // Maximum days in the circle (1 month)
@@ -452,28 +542,38 @@ async function loadUserData() {
       hasNewNotifications = userData.hasNewNotifications || false;
       
       console.log('Loaded data from localStorage:', userData);
-      
-      // Update UI with loaded data
-      updateUIWithUserData();
+    } else {
+      // Set default values for new users
+      userStreak = 0;
+      userPoints = 0;
+      hasNewNotifications = false;
     }
     
     // Then attempt to load from Firebase (for most up-to-date data)
-    // This is a placeholder - you'll need to implement the actual Firebase fetch
-    // const firebaseData = await fetchUserDataFromFirebase();
-    // if (firebaseData) {
-    //   userStreak = firebaseData.streak || 0;
-    //   userPoints = firebaseData.points || 0;
-    //   hasNewNotifications = firebaseData.hasNewNotifications || false;
-    //   
-    //   // Update localStorage with fresh data
-    //   saveUserDataToLocalStorage();
-    //   
-    //   // Update UI with loaded data
-    //   updateUIWithUserData();
-    // }
+    if (typeof database !== 'undefined') {
+      try {
+        const userId = getUserId();
+        const snapshot = await database.ref(`users/${userId}/stats`).once('value');
+        const firebaseData = snapshot.val() || {};
+        
+        // Use Firebase data if it exists
+        if (firebaseData) {
+          userStreak = firebaseData.streakDays || userStreak;
+          userPoints = firebaseData.points || userPoints;
+          
+          // Update localStorage with Firebase data
+          saveUserDataToLocalStorage();
+        }
+      } catch (error) {
+        console.error('Error fetching data from Firebase:', error);
+      }
+    }
     
-    // For demo purposes, simulate data
-    simulateUserData();
+    // Update streak based on login date
+    updateUserStreak();
+    
+    // Update UI with user data
+    updateUIWithUserData();
     
     return true;
   } catch (error) {
@@ -482,25 +582,19 @@ async function loadUserData() {
   }
 }
 
-// Simulate user data for testing
-function simulateUserData() {
-  userStreak = 5;
-  userPoints = 350;
-  hasNewNotifications = true;
-  saveUserDataToLocalStorage();
-}
-
 // Save user data to localStorage
 function saveUserDataToLocalStorage() {
+  const today = new Date().toISOString().split('T')[0];
   const userData = {
     streak: userStreak,
     points: userPoints,
     hasNewNotifications: hasNewNotifications,
+    lastLoginDate: today,
     lastUpdated: new Date().toISOString()
   };
   
   localStorage.setItem('userData', JSON.stringify(userData));
-  console.log('Saved user data to localStorage');
+  console.log('Saved user data to localStorage:', userData);
 }
 
 // Check if this is a new user
@@ -634,25 +728,29 @@ function ensureUIElementsExist() {
 
 // Update UI with user data
 function updateUIWithUserData() {
-  // Update streak count
+  // Update streak ring display
+  const streakRingElement = document.querySelector('.streak-ring');
   const streakCount = document.getElementById('streak-count');
-  if (streakCount) {
+  
+  if (streakRingElement && streakCount) {
+    // Update streak count text
     streakCount.textContent = userStreak;
     
-    // Update streak ring appearance based on streak value
-    const streakRing = document.querySelector('.streak-ring');
-    if (streakRing) {
-      // Remove all possible status classes first
-      streakRing.classList.remove('streak-low', 'streak-medium', 'streak-high');
-      
-      // Add appropriate class based on streak count
-      if (userStreak >= 7) {
-        streakRing.classList.add('streak-high');
-      } else if (userStreak >= 3) {
-        streakRing.classList.add('streak-medium');
-      } else {
-        streakRing.classList.add('streak-low');
-      }
+    // Update streak ring color based on streak length
+    streakRingElement.classList.remove('streak-low', 'streak-medium', 'streak-high');
+    
+    if (userStreak >= 7) {
+      streakRingElement.classList.add('streak-high');
+    } else if (userStreak >= 3) {
+      streakRingElement.classList.add('streak-medium');
+    } else {
+      streakRingElement.classList.add('streak-low');
+    }
+    
+    // If using SVG progress ring, update it too
+    const progressCircle = document.querySelector('.progress-ring-circle');
+    if (progressCircle) {
+      progressCircle.style.strokeDashoffset = calculateProgressRingOffset(userStreak);
     }
   }
   

@@ -8,20 +8,18 @@ console.log('Initializing app components');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Firebase (make sure firebase-config.js is loaded before this)
-    initializeFirebase();
+    console.log('DOM fully loaded');
     
-    // Initialize Telegram WebApp integration
-    initializeTelegramWebApp();
+    // Initialize Telegram WebApp first
+    if (window.Telegram && window.Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Expand the mini app to full height
+        tg.ready();
+        console.log('Telegram WebApp initialized and expanded');
+    }
     
-    // Load data from Telegram Storage first (for offline capability)
-    loadDataFromTelegramStorage();
-    
-    // Set up navigation
-    setupNavigation();
-    
-    // Default to home screen
-    loadHomeScreen();
+    // Initialize the app
+    initializeApp();
 });
 
 // Initialize Firebase Analytics
@@ -246,4 +244,36 @@ function loadProfileScreen() {
 function handleGetStartedClick() {
     console.log('Get Started button clicked');
     // Your existing code
+}
+
+// Ensure all the study, progress, and profile pages exist
+function createPagesIfNeeded() {
+    const appContainer = document.getElementById('app') || document.body;
+    
+    // Create study page if it doesn't exist
+    if (!document.getElementById('study-page')) {
+        const studyPage = document.createElement('div');
+        studyPage.id = 'study-page';
+        studyPage.className = 'page';
+        studyPage.style.display = 'none';
+        appContainer.appendChild(studyPage);
+    }
+    
+    // Create progress page if it doesn't exist
+    if (!document.getElementById('progress-page')) {
+        const progressPage = document.createElement('div');
+        progressPage.id = 'progress-page';
+        progressPage.className = 'page';
+        progressPage.style.display = 'none';
+        appContainer.appendChild(progressPage);
+    }
+    
+    // Create profile page if it doesn't exist
+    if (!document.getElementById('profile-page')) {
+        const profilePage = document.createElement('div');
+        profilePage.id = 'profile-page';
+        profilePage.className = 'page';
+        profilePage.style.display = 'none';
+        appContainer.appendChild(profilePage);
+    }
 } 
