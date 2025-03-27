@@ -19,20 +19,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check and update user streak
-    updateUserStreak();
+    try {
+        updateUserStreak();
+    } catch (error) {
+        console.error('Error updating user streak:', error);
+    }
     
     // Initialize the app
     initializeApp();
     
     // Initialize the navigation
-    const currentView = 'home'; // Default view
-    navigateToView(currentView);
+    try {
+        const currentView = 'home'; // Default view
+        navigateToView(currentView);
+    } catch (error) {
+        console.error('Error initializing navigation:', error);
+    }
     
     // Setup navigation event listeners if not already done
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function() {
-            const viewName = this.getAttribute('data-view');
-            navigateToView(viewName);
+            try {
+                const viewName = this.getAttribute('data-view');
+                console.log(`Navigation clicked: ${viewName}`);
+                navigateToView(viewName);
+            } catch (error) {
+                console.error('Error in navigation click handler:', error);
+            }
         });
     });
 });
@@ -293,56 +306,196 @@ function createPagesIfNeeded() {
     }
 }
 
-// Update the navigation function to properly load the progress page with streak data
+// Update the navigation function to properly load all pages
 function navigateToView(viewName) {
-    // Hide all views
-    document.querySelectorAll('.view').forEach(view => {
-        view.style.display = 'none';
-    });
+    console.log(`Navigating to view: ${viewName}`);
     
-    // Show the selected view
-    const selectedView = document.getElementById(viewName + '-view');
-    if (selectedView) {
-        selectedView.style.display = 'block';
+    try {
+        // Hide all views
+        document.querySelectorAll('.view').forEach(view => {
+            view.style.display = 'none';
+        });
         
-        // Special handling for different views
-        if (viewName === 'progress') {
-            // Make sure we have the latest streak data
-            const streakData = updateUserStreak();
+        // Show the selected view
+        const selectedView = document.getElementById(viewName + '-view');
+        if (selectedView) {
+            selectedView.style.display = 'block';
             
-            // Load the progress tracker instead of showing "coming soon"
-            if (selectedView.querySelector('.coming-soon')) {
-                // Replace "coming soon" with our progress tracker container
-                selectedView.innerHTML = '<div id="progress-page" class="progress-page"></div>';
-                
-                // Load the progress tracker
-                loadProgressTracker();
-            } else if (!selectedView.querySelector('.progress-tracker')) {
-                // If there's no progress tracker yet but also no "coming soon" message
-                // (e.g., if the HTML was changed manually), add the container
-                selectedView.innerHTML = '<div id="progress-page" class="progress-page"></div>';
-                loadProgressTracker();
-            } else {
-                // Progress tracker exists, just update the streak display
-                updateStreakDisplay(streakData);
+            // Special handling for different views
+            switch(viewName) {
+                case 'progress':
+                    // Handle progress view
+                    handleProgressView(selectedView);
+                    break;
+                    
+                case 'home':
+                    // Handle home view
+                    handleHomeView(selectedView);
+                    break;
+                    
+                case 'study':
+                    // Handle study view
+                    handleStudyView(selectedView);
+                    break;
+                    
+                case 'profile':
+                    // Handle profile view
+                    handleProfileView(selectedView);
+                    break;
             }
-        } else if (viewName === 'home') {
-            // Load home content if needed
-            loadHomeContent();
-        } else if (viewName === 'study') {
-            // Load study content if needed
-            loadStudyContent();
+        } else {
+            console.error(`View "${viewName}-view" not found`);
         }
+        
+        // Update active state in navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.getAttribute('data-view') === viewName) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    } catch (error) {
+        console.error('Error in navigateToView:', error);
+    }
+}
+
+// Handle loading the progress view
+function handleProgressView(container) {
+    console.log('Loading progress view');
+    
+    // Make sure we have the latest streak data
+    let streakData;
+    try {
+        streakData = updateUserStreak();
+        console.log('Updated user streak:', streakData);
+    } catch (streakError) {
+        console.error('Error updating user streak:', streakError);
+        streakData = { currentStreak: 0, points: 0 };
     }
     
-    // Update active state in navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        if (item.getAttribute('data-view') === viewName) {
-            item.classList.add('active');
+    // Remove "coming soon" if it exists and create progress container
+    if (container.querySelector('.coming-soon')) {
+        container.innerHTML = '<div id="progress-page" class="progress-page"></div>';
+    } else if (!container.querySelector('#progress-page')) {
+        container.innerHTML = '<div id="progress-page" class="progress-page"></div>';
+    }
+    
+    // Load the progress tracker
+    try {
+        if (typeof loadProgressTracker === 'function') {
+            loadProgressTracker();
         } else {
-            item.classList.remove('active');
+            console.error('loadProgressTracker function not found');
         }
-    });
+    } catch (error) {
+        console.error('Error loading progress tracker:', error);
+        document.getElementById('progress-page').innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">⚠️</div>
+                <p class="error-message">Failed to load progress tracker. Please try again.</p>
+                <button class="retry-btn" onclick="loadProgressTracker()">Reload</button>
+            </div>
+        `;
+    }
+}
+
+// Handle loading the home view
+function handleHomeView(container) {
+    // Check if we need to load home content
+    if (container.querySelector('.coming-soon') || !container.querySelector('.home-content')) {
+        try {
+            if (typeof loadHomeContent === 'function') {
+                loadHomeContent();
+            } else {
+                // Simple fallback if loadHomeContent doesn't exist
+                container.innerHTML = `
+                    <div class="home-content">
+                        <h2 class="section-title">Welcome to Language Learning App</h2>
+                        <div class="streaks-summary">
+                            <div class="streak-card">
+                                <div class="streak-icon">🔥</div>
+                                <div class="streak-info">
+                                    <div class="streak-count">${getUserData().currentStreak || 0}</div>
+                                    <div class="streak-label">Day Streak</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="recent-activity">
+                            <h3>Recent Activity</h3>
+                            <div class="activity-placeholder">
+                                Start learning to see your recent activity here!
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading home content:', error);
+        }
+    }
+}
+
+// Handle loading the study view
+function handleStudyView(container) {
+    // Check if we need to load study content
+    if (container.querySelector('.coming-soon') || !container.querySelector('.study-content')) {
+        try {
+            if (typeof loadStudyContent === 'function') {
+                loadStudyContent();
+            } else {
+                // Simple fallback if loadStudyContent doesn't exist
+                container.innerHTML = `
+                    <div class="study-content">
+                        <h2 class="section-title">Study Materials</h2>
+                        <div class="categories-container">
+                            <div class="category-placeholder">
+                                Choose a category to begin studying
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading study content:', error);
+        }
+    }
+}
+
+// Handle loading the profile view
+function handleProfileView(container) {
+    // Check if we need to load profile content
+    if (container.querySelector('.coming-soon') || !container.querySelector('.profile-content')) {
+        try {
+            if (typeof loadProfileContent === 'function') {
+                loadProfileContent();
+            } else {
+                // Simple fallback to show basic profile info
+                const userData = getUserData();
+                container.innerHTML = `
+                    <div class="profile-content">
+                        <h2 class="section-title">Your Profile</h2>
+                        <div class="profile-stats">
+                            <div class="profile-stat">
+                                <div class="stat-label">Current Streak</div>
+                                <div class="stat-value">${userData.currentStreak || 0} days</div>
+                            </div>
+                            <div class="profile-stat">
+                                <div class="stat-label">Total Points</div>
+                                <div class="stat-value">${userData.points || 0}</div>
+                            </div>
+                        </div>
+                        <div class="profile-actions">
+                            <button class="profile-action-btn">Edit Profile</button>
+                            <button class="profile-action-btn">Settings</button>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading profile content:', error);
+        }
+    }
 }
 
 // Function to update user streak
@@ -446,5 +599,83 @@ function updateUserStreakInFirebase(userData) {
         });
     } catch (error) {
         console.error('Error updating Firebase:', error);
+    }
+}
+
+// Adding simple helper function for streak functions if they don't exist yet
+
+// Function to get user streak data from localStorage
+function getUserStreakData() {
+    try {
+        const streakData = localStorage.getItem('userStreak');
+        if (streakData) {
+            return JSON.parse(streakData);
+        }
+    } catch (error) {
+        console.error('Error getting user streak data:', error);
+    }
+    return { currentStreak: 0, points: 0, lastLoginDate: null };
+}
+
+// Helper function to determine streak ring class based on streak count
+function getStreakRingClass(streakCount) {
+    if (streakCount >= 30) return 'streak-ring-high';
+    if (streakCount >= 7) return 'streak-ring-medium';
+    return 'streak-ring-low';
+}
+
+// Helper function to generate motivational streak message
+function getStreakMessage(streakCount) {
+    if (streakCount === 0) return "Start your streak today!";
+    if (streakCount === 1) return "You're on your way!";
+    if (streakCount < 7) return "Keep it going!";
+    if (streakCount < 14) return "Impressive consistency!";
+    if (streakCount < 30) return "You're on fire!";
+    return "Unstoppable!";
+}
+
+// Helper function to calculate bonus points based on streak length
+function calculateStreakBonus(streakCount) {
+    if (streakCount === 0) return 0;
+    if (streakCount < 3) return 5;
+    if (streakCount < 7) return 10;
+    if (streakCount < 14) return 15;
+    if (streakCount < 30) return 25;
+    return 50;
+}
+
+// Function to update the streak display
+function updateStreakDisplay(streakData) {
+    try {
+        console.log('Updating streak display:', streakData);
+        
+        // First check if the elements exist before trying to update them
+        const streakRing = document.querySelector('.streak-ring');
+        const streakCount = document.querySelector('.streak-count');
+        const streakMessage = document.querySelector('.streak-message');
+        const streakBonus = document.querySelector('.streak-bonus');
+        const summaryStreak = document.getElementById('current-streak');
+        
+        if (!streakRing || !streakCount || !streakMessage || !streakBonus) {
+            console.warn('Streak elements not found in the DOM');
+            return; // Exit if elements don't exist
+        }
+        
+        // Update the streak count
+        const currentStreak = streakData?.currentStreak || 0;
+        streakCount.textContent = currentStreak;
+        if (summaryStreak) summaryStreak.textContent = currentStreak;
+        
+        // Update the streak ring class
+        streakRing.className = `streak-ring ${getStreakRingClass(currentStreak)}`;
+        
+        // Update the streak message
+        streakMessage.textContent = getStreakMessage(currentStreak);
+        
+        // Update the bonus points
+        const bonus = calculateStreakBonus(currentStreak);
+        streakBonus.textContent = `+ ${bonus} bonus points today`;
+    } catch (error) {
+        console.error('Error updating streak display:', error);
     }
 } 

@@ -7,9 +7,14 @@ function isProgressTrackerInitialized() {
 // Then update the loadProgressTracker function to check if already initialized
 function loadProgressTracker() {
     try {
+        console.log('Loading progress tracker');
+        
         // Check if already initialized to avoid duplicate content
         if (isProgressTrackerInitialized()) {
             console.log('Progress tracker already initialized');
+            
+            // Update the streak display with latest data
+            updateStreakDisplay(getUserStreakData());
             return;
         }
         
@@ -19,122 +24,176 @@ function loadProgressTracker() {
             return;
         }
         
-        // Show loading state for the entire container
-        showLoadingState('#progress-page', 'Loading your progress...');
-        
-        const userId = getUserId();
-        if (!userId) {
-            showErrorState('#progress-page', 'User not authenticated. Please log in again.');
-            return;
-        }
-        
-        // Get user streak data from localStorage
+        // Get user streak data to display
         const userStreak = getUserStreakData();
+        console.log('User streak data:', userStreak);
         
-        // Render the initial HTML structure
-        container.innerHTML = `
-            <div class="progress-tracker">
-                <h2 class="section-title">Your Progress</h2>
-                
-                <div class="time-filter">
-                    <button class="time-filter-btn active" data-period="week">Week</button>
-                    <button class="time-filter-btn" data-period="month">Month</button>
-                    <button class="time-filter-btn" data-period="all">All Time</button>
-                </div>
-                
-                <div class="streak-container">
-                    <div class="streak-ring-container">
-                        <div class="streak-ring ${getStreakRingClass(userStreak.currentStreak)}">
-                            <div class="streak-count">${userStreak.currentStreak}</div>
-                            <div class="streak-label">day streak</div>
+        // Render the initial HTML structure with error handling
+        try {
+            container.innerHTML = `
+                <div class="progress-tracker">
+                    <h2 class="section-title">Your Progress</h2>
+                    
+                    <div class="streak-container">
+                        <div class="streak-ring-container">
+                            <div class="streak-ring ${getStreakRingClass(userStreak.currentStreak || 0)}">
+                                <div class="streak-count">${userStreak.currentStreak || 0}</div>
+                                <div class="streak-label">day streak</div>
+                            </div>
+                        </div>
+                        <div class="streak-details">
+                            <div class="streak-message">${getStreakMessage(userStreak.currentStreak || 0)}</div>
+                            <div class="streak-bonus">+ ${calculateStreakBonus(userStreak.currentStreak || 0)} bonus points today</div>
                         </div>
                     </div>
-                    <div class="streak-details">
-                        <div class="streak-message">${getStreakMessage(userStreak.currentStreak)}</div>
-                        <div class="streak-bonus">+ ${calculateStreakBonus(userStreak.currentStreak)} bonus points today</div>
+                    
+                    <div class="time-filter">
+                        <button class="time-filter-btn active" data-period="week">Week</button>
+                        <button class="time-filter-btn" data-period="month">Month</button>
+                        <button class="time-filter-btn" data-period="all">All Time</button>
                     </div>
-                </div>
-                
-                <div class="summary-cards">
-                    <div class="loading-indicator"><div class="spinner"></div></div>
-                </div>
-                
-                <!-- Rest of the progress tracker HTML -->
-                <div class="calendar-section">
-                    <h3>Activity Calendar</h3>
-                    <div id="activity-calendar" class="activity-calendar">
-                        <div class="loading-indicator"><div class="spinner"></div></div>
+                    
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="summary-icon">🔥</div>
+                            <div class="summary-content">
+                                <div class="summary-title">Current Streak</div>
+                                <div class="summary-value" id="current-streak">${userStreak.currentStreak || 0}</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">⭐</div>
+                            <div class="summary-content">
+                                <div class="summary-title">Total Points</div>
+                                <div class="summary-value" id="total-points">${userStreak.points || 0}</div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-icon">📊</div>
+                            <div class="summary-content">
+                                <div class="summary-title">Quiz Avg.</div>
+                                <div class="summary-value" id="quiz-average">0%</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- Other sections remain the same -->
-                <!-- ... -->
-            </div>
-        `;
-        
-        // Load user data with error handling
-        Promise.all([
-            database.ref(`users/${userId}/stats`).once('value').catch(e => {
-                console.error('Error fetching stats:', e);
-                return { val: () => ({ streakDays: userStreak.currentStreak || 0, points: 0 }) };
-            }),
-            // Other database calls remain the same
-            // ...
-        ]).then(([statsSnapshot, activitySnapshot, badgesSnapshot, quizResultsSnapshot, goalsSnapshot]) => {
-            const stats = statsSnapshot.val() || { 
-                streakDays: userStreak.currentStreak || 0, 
-                points: userStreak.points || 0 
-            };
-            
-            // Hide main loading state
-            hideLoadingState('#progress-page');
-            
-            // Update summary cards to include streak
-            const summaryCardsHTML = `
-                <div class="summary-card">
-                    <div class="summary-icon">🔥</div>
-                    <div class="summary-content">
-                        <div class="summary-title">Current Streak</div>
-                        <div class="summary-value" id="current-streak">${stats.streakDays || userStreak.currentStreak || 0}</div>
+                    
+                    <div class="calendar-section">
+                        <h3>Activity Calendar</h3>
+                        <div id="activity-calendar" class="activity-calendar">
+                            <div class="empty-state">
+                                <div class="empty-icon">📅</div>
+                                <p>Your activity will appear here</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-icon">⭐</div>
-                    <div class="summary-content">
-                        <div class="summary-title">Total Points</div>
-                        <div class="summary-value" id="total-points">${stats.points || userStreak.points || 0}</div>
+                    
+                    <div class="badges-section">
+                        <h3>Your Achievements</h3>
+                        <div id="badges-container" class="badges-container">
+                            <div class="empty-state">
+                                <div class="empty-icon">🏆</div>
+                                <p>Complete activities to earn badges</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-icon">📊</div>
-                    <div class="summary-content">
-                        <div class="summary-title">Quiz Avg.</div>
-                        <div class="summary-value" id="quiz-average">0%</div>
+                    
+                    <div class="performance-section">
+                        <h3>Performance by Topic</h3>
+                        <div id="performance-chart" class="performance-chart">
+                            <div class="empty-state">
+                                <div class="empty-icon">📈</div>
+                                <p>Complete quizzes to see your performance</p>
+                            </div>
+                        </div>
+                        
+                        <div class="weak-areas-section">
+                            <h4>Areas to Improve</h4>
+                            <div id="weak-areas-container" class="weak-areas-container">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📋</div>
+                                    <p>Complete more quizzes to identify weak areas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="leaderboard-section">
+                        <h3>Leaderboard</h3>
+                        <div class="leaderboard-filter">
+                            <button class="leaderboard-filter-btn active" data-scope="class">Class</button>
+                            <button class="leaderboard-filter-btn" data-scope="global">Global</button>
+                        </div>
+                        <div id="leaderboard-container" class="leaderboard-container">
+                            <div class="empty-state">
+                                <div class="empty-icon">🏅</div>
+                                <p>Leaderboard data will appear here</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="goals-section">
+                        <h3>Learning Goals</h3>
+                        <div id="goals-container" class="goals-container">
+                            <div class="empty-state">
+                                <div class="empty-icon">🎯</div>
+                                <p>Set goals to track your progress</p>
+                            </div>
+                        </div>
+                        <button id="add-goal-btn" class="add-goal-btn">Set New Goal</button>
                     </div>
                 </div>
             `;
+            console.log('Progress tracker HTML rendered successfully');
             
-            document.querySelector('.summary-cards').innerHTML = summaryCardsHTML;
+            // Initialize sub-components if data exists and functions are available
+            try {
+                // If these functions exist, call them to render actual data
+                if (typeof initializeLeaderboard === 'function') {
+                    initializeLeaderboard();
+                }
+                
+                if (typeof initializeGoalSetting === 'function') {
+                    initializeGoalSetting();
+                }
+                
+                if (typeof enhancePerformanceAnalytics === 'function') {
+                    enhancePerformanceAnalytics();
+                }
+                
+                // Setup event listeners
+                setupProgressTrackerEventListeners();
+                console.log('Progress tracker event listeners setup complete');
+                
+                // Check for streak milestone
+                if (typeof checkStreakMilestone === 'function') {
+                    checkStreakMilestone(userStreak.currentStreak || 0);
+                }
+            } catch (initError) {
+                console.error('Error initializing sub-components:', initError);
+            }
             
-            // Continue with the rest of your existing code
-            // Process activity data for calendar, badges, quiz results, etc.
-            // ...
-            
-            // Set up event listeners
-            setupProgressTrackerEventListeners();
-            
-        }).catch(error => {
-            console.error('Error loading progress data:', error);
-            showErrorState('#progress-page', 'Failed to load progress data. Please try again.', loadProgressTracker);
-            showToast('Error loading progress data', 'error');
-        });
+        } catch (renderError) {
+            console.error('Error rendering progress tracker HTML:', renderError);
+            container.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <p class="error-message">Failed to load progress tracker. Please try again.</p>
+                    <button class="retry-btn" onclick="loadProgressTracker()">Reload</button>
+                </div>
+            `;
+        }
     } catch (error) {
         console.error('Unexpected error in loadProgressTracker:', error);
         const container = document.getElementById('progress-page');
         if (container) {
-            showErrorState('#progress-page', 'An unexpected error occurred. Please try again.', loadProgressTracker);
+            container.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <p class="error-message">An unexpected error occurred. Please try again.</p>
+                    <button class="retry-btn" onclick="loadProgressTracker()">Reload</button>
+                </div>
+            `;
         }
-        showToast('Unexpected error occurred', 'error');
     }
 }
 
@@ -3195,16 +3254,22 @@ function highlightInvalidField(fieldId) {
 
 // Function to update the streak display
 function updateStreakDisplay(streakData) {
+    console.log('Updating streak display:', streakData);
+    
+    // First check if the elements exist before trying to update them
     const streakRing = document.querySelector('.streak-ring');
     const streakCount = document.querySelector('.streak-count');
     const streakMessage = document.querySelector('.streak-message');
     const streakBonus = document.querySelector('.streak-bonus');
     const summaryStreak = document.getElementById('current-streak');
     
-    if (!streakRing || !streakCount || !streakMessage || !streakBonus) return;
+    if (!streakRing || !streakCount || !streakMessage || !streakBonus) {
+        console.warn('Streak elements not found in the DOM');
+        return; // Exit if elements don't exist
+    }
     
     // Update the streak count
-    const currentStreak = streakData.currentStreak || 0;
+    const currentStreak = streakData?.currentStreak || 0;
     streakCount.textContent = currentStreak;
     if (summaryStreak) summaryStreak.textContent = currentStreak;
     
@@ -3217,14 +3282,6 @@ function updateStreakDisplay(streakData) {
     // Update the bonus points
     const bonus = calculateStreakBonus(currentStreak);
     streakBonus.textContent = `+ ${bonus} bonus points today`;
-    
-    // Animate if it's a milestone streak
-    if (isStreakMilestone(currentStreak)) {
-        streakRing.classList.add('streak-milestone');
-        setTimeout(() => {
-            streakRing.classList.remove('streak-milestone');
-        }, 1000);
-    }
 }
 
 // Check if the current streak is a milestone
