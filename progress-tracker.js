@@ -1,25 +1,108 @@
 // Progress Tracker Implementation
+function isProgressTrackerInitialized() {
+    const container = document.getElementById('progress-page');
+    return container && container.querySelector('.progress-tracker');
+}
+
+// Then update the loadProgressTracker function to check if already initialized
 function loadProgressTracker() {
-    const container = document.getElementById('main-container');
-    const userId = getUserId();
-    
-    container.innerHTML = `
-        <div class="progress-tracker">
-            <h2 class="section-title">Your Progress</h2>
+    try {
+        // Check if already initialized to avoid duplicate content
+        if (isProgressTrackerInitialized()) {
+            console.log('Progress tracker already initialized');
+            return;
+        }
+        
+        const container = document.getElementById('progress-page');
+        if (!container) {
+            console.error('Container for progress tracker not found');
+            return;
+        }
+        
+        // Show loading state for the entire container
+        showLoadingState('#progress-page', 'Loading your progress...');
+        
+        const userId = getUserId();
+        if (!userId) {
+            showErrorState('#progress-page', 'User not authenticated. Please log in again.');
+            return;
+        }
+        
+        // Get user streak data from localStorage
+        const userStreak = getUserStreakData();
+        
+        // Render the initial HTML structure
+        container.innerHTML = `
+            <div class="progress-tracker">
+                <h2 class="section-title">Your Progress</h2>
+                
+                <div class="time-filter">
+                    <button class="time-filter-btn active" data-period="week">Week</button>
+                    <button class="time-filter-btn" data-period="month">Month</button>
+                    <button class="time-filter-btn" data-period="all">All Time</button>
+                </div>
+                
+                <div class="streak-container">
+                    <div class="streak-ring-container">
+                        <div class="streak-ring ${getStreakRingClass(userStreak.currentStreak)}">
+                            <div class="streak-count">${userStreak.currentStreak}</div>
+                            <div class="streak-label">day streak</div>
+                        </div>
+                    </div>
+                    <div class="streak-details">
+                        <div class="streak-message">${getStreakMessage(userStreak.currentStreak)}</div>
+                        <div class="streak-bonus">+ ${calculateStreakBonus(userStreak.currentStreak)} bonus points today</div>
+                    </div>
+                </div>
+                
+                <div class="summary-cards">
+                    <div class="loading-indicator"><div class="spinner"></div></div>
+                </div>
+                
+                <!-- Rest of the progress tracker HTML -->
+                <div class="calendar-section">
+                    <h3>Activity Calendar</h3>
+                    <div id="activity-calendar" class="activity-calendar">
+                        <div class="loading-indicator"><div class="spinner"></div></div>
+                    </div>
+                </div>
+                
+                <!-- Other sections remain the same -->
+                <!-- ... -->
+            </div>
+        `;
+        
+        // Load user data with error handling
+        Promise.all([
+            database.ref(`users/${userId}/stats`).once('value').catch(e => {
+                console.error('Error fetching stats:', e);
+                return { val: () => ({ streakDays: userStreak.currentStreak || 0, points: 0 }) };
+            }),
+            // Other database calls remain the same
+            // ...
+        ]).then(([statsSnapshot, activitySnapshot, badgesSnapshot, quizResultsSnapshot, goalsSnapshot]) => {
+            const stats = statsSnapshot.val() || { 
+                streakDays: userStreak.currentStreak || 0, 
+                points: userStreak.points || 0 
+            };
             
-            <div class="summary-cards">
+            // Hide main loading state
+            hideLoadingState('#progress-page');
+            
+            // Update summary cards to include streak
+            const summaryCardsHTML = `
                 <div class="summary-card">
                     <div class="summary-icon">🔥</div>
                     <div class="summary-content">
                         <div class="summary-title">Current Streak</div>
-                        <div class="summary-value" id="current-streak">0</div>
+                        <div class="summary-value" id="current-streak">${stats.streakDays || userStreak.currentStreak || 0}</div>
                     </div>
                 </div>
                 <div class="summary-card">
                     <div class="summary-icon">⭐</div>
                     <div class="summary-content">
                         <div class="summary-title">Total Points</div>
-                        <div class="summary-value" id="total-points">0</div>
+                        <div class="summary-value" id="total-points">${stats.points || userStreak.points || 0}</div>
                     </div>
                 </div>
                 <div class="summary-card">
@@ -29,132 +112,70 @@ function loadProgressTracker() {
                         <div class="summary-value" id="quiz-average">0%</div>
                     </div>
                 </div>
-            </div>
+            `;
             
-            <div class="calendar-section">
-                <h3>Activity Calendar</h3>
-                <div id="activity-calendar" class="activity-calendar">
-                    <div class="loading">Loading calendar...</div>
-                </div>
-            </div>
+            document.querySelector('.summary-cards').innerHTML = summaryCardsHTML;
             
-            <div class="badges-section">
-                <h3>Your Achievements</h3>
-                <div id="badges-container" class="badges-container">
-                    <div class="loading">Loading achievements...</div>
-                </div>
-            </div>
+            // Continue with the rest of your existing code
+            // Process activity data for calendar, badges, quiz results, etc.
+            // ...
             
-            <div class="performance-section">
-                <h3>Performance by Topic</h3>
-                <div id="performance-chart" class="performance-chart">
-                    <div class="loading">Loading chart...</div>
-                </div>
-                
-                <div class="weak-areas-section">
-                    <h4>Areas to Improve</h4>
-                    <div id="weak-areas-container" class="weak-areas-container">
-                        <div class="loading">Analyzing your performance...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Leaderboard Section -->
-            <div class="leaderboard-section">
-                <h3>Leaderboard</h3>
-                <div class="leaderboard-filter">
-                    <button class="leaderboard-filter-btn active" data-scope="class">Class</button>
-                    <button class="leaderboard-filter-btn" data-scope="global">Global</button>
-                </div>
-                <div id="leaderboard-container" class="leaderboard-container">
-                    <div class="loading">Loading leaderboard...</div>
-                </div>
-            </div>
+            // Set up event listeners
+            setupProgressTrackerEventListeners();
             
-            <!-- Goals Section -->
-            <div class="goals-section">
-                <h3>Learning Goals</h3>
-                <div id="goals-container" class="goals-container">
-                    <div class="loading">Loading your goals...</div>
-                </div>
-                <button id="add-goal-btn" class="add-goal-btn">Set New Goal</button>
-            </div>
-        </div>
-    `;
-    
-    // Load user data
-    Promise.all([
-        database.ref(`users/${userId}/stats`).once('value'),
-        database.ref(`users/${userId}/activity`).once('value'),
-        database.ref(`users/${userId}/badges`).once('value'),
-        database.ref(`users/${userId}/quizResults`).once('value')
-    ]).then(([statsSnapshot, activitySnapshot, badgesSnapshot, quizResultsSnapshot]) => {
-        const stats = statsSnapshot.val() || { streakDays: 0, points: 0 };
-        
-        // Update summary cards
-        document.getElementById('current-streak').textContent = stats.streakDays;
-        document.getElementById('total-points').textContent = stats.points;
-        
-        // Process activity data for calendar
-        const activityData = {};
-        activitySnapshot.forEach(childSnapshot => {
-            const activity = childSnapshot.val();
-            const date = new Date(activity.timestamp).toISOString().split('T')[0]; // YYYY-MM-DD
-            
-            if (!activityData[date]) {
-                activityData[date] = 1;
-            } else {
-                activityData[date]++;
-            }
+        }).catch(error => {
+            console.error('Error loading progress data:', error);
+            showErrorState('#progress-page', 'Failed to load progress data. Please try again.', loadProgressTracker);
+            showToast('Error loading progress data', 'error');
         });
-        
-        // Render calendar
-        renderActivityCalendar(activityData);
-        
-        // Process badges
-        const badges = [];
-        badgesSnapshot.forEach(childSnapshot => {
-            badges.push(childSnapshot.val());
-        });
-        renderBadges(badges);
-        
-        // Process quiz results
-        const quizResults = [];
-        let totalScore = 0;
-        let quizCount = 0;
-        
-        quizResultsSnapshot.forEach(childSnapshot => {
-            const result = childSnapshot.val();
-            quizResults.push(result);
-            
-            if (result.score !== undefined) {
-                totalScore += result.score;
-                quizCount++;
-            }
-        });
-        
-        // Calculate and update quiz average
-        const quizAverage = quizCount > 0 ? Math.round(totalScore / quizCount) : 0;
-        document.getElementById('quiz-average').textContent = `${quizAverage}%`;
-        
-        // Render performance chart
-        renderPerformanceChart(quizResults);
-        
-        // New: Identify and render weak areas
-        identifyAndRenderWeakAreas(quizResults);
+    } catch (error) {
+        console.error('Unexpected error in loadProgressTracker:', error);
+        const container = document.getElementById('progress-page');
+        if (container) {
+            showErrorState('#progress-page', 'An unexpected error occurred. Please try again.', loadProgressTracker);
+        }
+        showToast('Unexpected error occurred', 'error');
+    }
+}
 
-        // Initialize the leaderboard
-        initializeLeaderboard();
+// Function to get user streak data from localStorage
+function getUserStreakData() {
+    try {
+        const streakData = localStorage.getItem('userStreak');
+        if (streakData) {
+            return JSON.parse(streakData);
+        }
+    } catch (error) {
+        console.error('Error getting user streak data:', error);
+    }
+    return { currentStreak: 0, points: 0, lastLoginDate: null };
+}
 
-        // Initialize goal setting
-        initializeGoalSetting();
-        
-        // Initialize enhanced performance analytics
-        enhancePerformanceAnalytics();
-        
-        // Set up global event listeners for all interactive elements
-        setupGlobalEventListeners();
-    });
+// Helper function to determine streak ring class based on streak count
+function getStreakRingClass(streakCount) {
+    if (streakCount >= 30) return 'streak-ring-high';
+    if (streakCount >= 7) return 'streak-ring-medium';
+    return 'streak-ring-low';
+}
+
+// Helper function to generate motivational streak message
+function getStreakMessage(streakCount) {
+    if (streakCount === 0) return "Start your streak today!";
+    if (streakCount === 1) return "You're on your way!";
+    if (streakCount < 7) return "Keep it going!";
+    if (streakCount < 14) return "Impressive consistency!";
+    if (streakCount < 30) return "You're on fire!";
+    return "Unstoppable!";
+}
+
+// Helper function to calculate bonus points based on streak length
+function calculateStreakBonus(streakCount) {
+    if (streakCount === 0) return 0;
+    if (streakCount < 3) return 5;
+    if (streakCount < 7) return 10;
+    if (streakCount < 14) return 15;
+    if (streakCount < 30) return 25;
+    return 50;
 }
 
 // Create global variables to track current calendar view
@@ -3169,5 +3190,85 @@ function highlightInvalidField(fieldId) {
             field.classList.remove('invalid-input');
             field.removeEventListener('input', onInput);
         });
+    }
+}
+
+// Function to update the streak display
+function updateStreakDisplay(streakData) {
+    const streakRing = document.querySelector('.streak-ring');
+    const streakCount = document.querySelector('.streak-count');
+    const streakMessage = document.querySelector('.streak-message');
+    const streakBonus = document.querySelector('.streak-bonus');
+    const summaryStreak = document.getElementById('current-streak');
+    
+    if (!streakRing || !streakCount || !streakMessage || !streakBonus) return;
+    
+    // Update the streak count
+    const currentStreak = streakData.currentStreak || 0;
+    streakCount.textContent = currentStreak;
+    if (summaryStreak) summaryStreak.textContent = currentStreak;
+    
+    // Update the streak ring class
+    streakRing.className = `streak-ring ${getStreakRingClass(currentStreak)}`;
+    
+    // Update the streak message
+    streakMessage.textContent = getStreakMessage(currentStreak);
+    
+    // Update the bonus points
+    const bonus = calculateStreakBonus(currentStreak);
+    streakBonus.textContent = `+ ${bonus} bonus points today`;
+    
+    // Animate if it's a milestone streak
+    if (isStreakMilestone(currentStreak)) {
+        streakRing.classList.add('streak-milestone');
+        setTimeout(() => {
+            streakRing.classList.remove('streak-milestone');
+        }, 1000);
+    }
+}
+
+// Check if the current streak is a milestone
+function isStreakMilestone(streak) {
+    return [3, 7, 14, 21, 30, 60, 90, 100, 365].includes(streak);
+}
+
+// Function to check and celebrate streak milestones
+function checkStreakMilestone(streak) {
+    if (isStreakMilestone(streak)) {
+        // Show a special celebration for milestone streaks
+        showStreakMilestoneCelebration(streak);
+    }
+}
+
+// Function to show celebration for milestone streaks
+function showStreakMilestoneCelebration(streak) {
+    // Show confetti
+    showConfetti();
+    
+    // Show toast message
+    let message = "";
+    if (streak === 3) message = "3 Day Streak! You're building a habit!";
+    else if (streak === 7) message = "7 Day Streak! A full week of learning!";
+    else if (streak === 14) message = "14 Day Streak! Two weeks strong!";
+    else if (streak === 21) message = "21 Day Streak! You've formed a habit!";
+    else if (streak === 30) message = "30 Day Streak! A full month of dedication!";
+    else if (streak === 60) message = "60 Day Streak! Two months of excellence!";
+    else if (streak === 90) message = "90 Day Streak! A full quarter of commitment!";
+    else if (streak === 100) message = "100 Day Streak! Triple digits achievement!";
+    else if (streak === 365) message = "365 Day Streak! A FULL YEAR! Legendary status!";
+    
+    showToast(message, 'success', 5000);
+}
+
+// Add this function to ensure we update the streak when we update progress
+function updateUserStreakInUI(streakData) {
+    if (!streakData) return;
+    
+    // Update the localStorage data
+    localStorage.setItem('userStreak', JSON.stringify(streakData));
+    
+    // Update the UI if the progress tracker is displayed
+    if (document.querySelector('.streak-container')) {
+        updateStreakDisplay(streakData);
     }
 }

@@ -18,8 +18,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Telegram WebApp initialized and expanded');
     }
     
+    // Check and update user streak
+    updateUserStreak();
+    
     // Initialize the app
     initializeApp();
+    
+    // Initialize the navigation
+    const currentView = 'home'; // Default view
+    navigateToView(currentView);
+    
+    // Setup navigation event listeners if not already done
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const viewName = this.getAttribute('data-view');
+            navigateToView(viewName);
+        });
+    });
 });
 
 // Initialize Firebase Analytics
@@ -275,5 +290,161 @@ function createPagesIfNeeded() {
         profilePage.className = 'page';
         profilePage.style.display = 'none';
         appContainer.appendChild(profilePage);
+    }
+}
+
+// Update the navigation function to properly load the progress page with streak data
+function navigateToView(viewName) {
+    // Hide all views
+    document.querySelectorAll('.view').forEach(view => {
+        view.style.display = 'none';
+    });
+    
+    // Show the selected view
+    const selectedView = document.getElementById(viewName + '-view');
+    if (selectedView) {
+        selectedView.style.display = 'block';
+        
+        // Special handling for different views
+        if (viewName === 'progress') {
+            // Make sure we have the latest streak data
+            const streakData = updateUserStreak();
+            
+            // Load the progress tracker instead of showing "coming soon"
+            if (selectedView.querySelector('.coming-soon')) {
+                // Replace "coming soon" with our progress tracker container
+                selectedView.innerHTML = '<div id="progress-page" class="progress-page"></div>';
+                
+                // Load the progress tracker
+                loadProgressTracker();
+            } else if (!selectedView.querySelector('.progress-tracker')) {
+                // If there's no progress tracker yet but also no "coming soon" message
+                // (e.g., if the HTML was changed manually), add the container
+                selectedView.innerHTML = '<div id="progress-page" class="progress-page"></div>';
+                loadProgressTracker();
+            } else {
+                // Progress tracker exists, just update the streak display
+                updateStreakDisplay(streakData);
+            }
+        } else if (viewName === 'home') {
+            // Load home content if needed
+            loadHomeContent();
+        } else if (viewName === 'study') {
+            // Load study content if needed
+            loadStudyContent();
+        }
+    }
+    
+    // Update active state in navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if (item.getAttribute('data-view') === viewName) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+// Function to update user streak
+function updateUserStreak() {
+    try {
+        // Get user data from localStorage
+        let userData = getUserData();
+        
+        // Get current date
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Check if this is first login (no last login date)
+        if (!userData.lastLoginDate) {
+            // First time user, initialize streak
+            userData = {
+                ...userData,
+                currentStreak: 1,
+                lastLoginDate: todayStr,
+            };
+            console.log('First login, streak initialized to 1');
+        } 
+        // Check if already logged in today
+        else if (userData.lastLoginDate === todayStr) {
+            // Already logged in today, do nothing to streak
+            console.log('Already logged in today, streak unchanged');
+        } 
+        // Check if last login was yesterday
+        else {
+            const lastLogin = new Date(userData.lastLoginDate);
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (lastLogin.toISOString().split('T')[0] === yesterday.toISOString().split('T')[0]) {
+                // Consecutive day, increment streak
+                userData.currentStreak = (userData.currentStreak || 0) + 1;
+                userData.lastLoginDate = todayStr;
+                console.log(`Consecutive login, streak incremented to ${userData.currentStreak}`);
+                
+                // Add bonus points based on streak length
+                const bonus = calculateStreakBonus(userData.currentStreak);
+                userData.points = (userData.points || 0) + bonus;
+                
+                // If it's a milestone, we'll celebrate later when the UI is ready
+            } else {
+                // Streak broken, reset to 1
+                userData.currentStreak = 1;
+                userData.lastLoginDate = todayStr;
+                console.log('Streak reset to 1 (not consecutive days)');
+            }
+        }
+        
+        // Save updated user data
+        saveUserData(userData);
+        
+        // Update Firebase if available
+        updateUserStreakInFirebase(userData);
+        
+        return userData;
+    } catch (error) {
+        console.error('Error updating user streak:', error);
+        return { currentStreak: 0, lastLoginDate: new Date().toISOString().split('T')[0] };
+    }
+}
+
+// Get user data from localStorage
+function getUserData() {
+    try {
+        const userData = localStorage.getItem('userStreak');
+        return userData ? JSON.parse(userData) : { currentStreak: 0, points: 0 };
+    } catch (error) {
+        console.error('Error getting user data:', error);
+        return { currentStreak: 0, points: 0 };
+    }
+}
+
+// Save user data to localStorage
+function saveUserData(userData) {
+    try {
+        localStorage.setItem('userStreak', JSON.stringify(userData));
+    } catch (error) {
+        console.error('Error saving user data:', error);
+    }
+}
+
+// Update user streak in Firebase
+function updateUserStreakInFirebase(userData) {
+    const userId = getUserId(); // Make sure this function is defined
+    if (!userId || !window.firebase) return;
+    
+    try {
+        const userRef = firebase.database().ref(`users/${userId}/stats`);
+        userRef.update({
+            streakDays: userData.currentStreak,
+            points: userData.points,
+            lastLoginDate: userData.lastLoginDate
+        }).then(() => {
+            console.log('User streak updated in Firebase');
+        }).catch(error => {
+            console.error('Error updating user streak in Firebase:', error);
+        });
+    } catch (error) {
+        console.error('Error updating Firebase:', error);
     }
 } 

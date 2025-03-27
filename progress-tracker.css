@@ -1,6 +1,25 @@
 /* Progress Tracker Styles */
+.progress-page {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0;
+    margin: 0;
+    background-color: #f5f7fa;
+}
+
 .progress-tracker {
     padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.view {
+    flex: 1;
+    overflow-y: auto;
+    height: 100%;
+    width: 100%;
 }
 
 .section-title {
@@ -1960,5 +1979,127 @@
     .summary-cards {
         gap: 10px;
         margin-bottom: 15px;
+    }
+}
+
+/* Streak Display Styles - Add to your progress-tracker.css file */
+.streak-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    background-color: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.streak-ring-container {
+    margin-right: 20px;
+}
+
+.streak-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 6px solid;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.streak-ring::before {
+    content: '🔥';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 20px;
+}
+
+.streak-ring-low {
+    border-color: #EBCB8B;
+}
+
+.streak-ring-medium {
+    border-color: #D08770;
+}
+
+.streak-ring-high {
+    border-color: #BF616A;
+    animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(191, 97, 106, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 10px rgba(191, 97, 106, 0);
+    }
+}
+
+.streak-count {
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.streak-label {
+    font-size: 12px;
+    color: #4C566A;
+    text-align: center;
+}
+
+.streak-details {
+    flex: 1;
+}
+
+.streak-message {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4C566A;
+}
+
+.streak-bonus {
+    font-size: 14px;
+    color: #A3BE8C;
+    font-weight: 500;
+}
+
+/* For streak milestone celebration */
+.streak-milestone {
+    animation: celebrate 0.5s ease-in-out;
+    transition: transform 0.3s ease;
+}
+
+@keyframes celebrate {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .streak-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 15px 10px;
+    }
+    
+    .streak-ring-container {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+    
+    .streak-details {
+        width: 100%;
     }
 } 
