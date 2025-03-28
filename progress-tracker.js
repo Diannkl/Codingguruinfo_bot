@@ -2741,111 +2741,59 @@ function filterProgressByPeriod(period) {
 
 // Function to setup all event listeners throughout the progress tracker
 function setupProgressTrackerEventListeners() {
-    // Time filter buttons for progress summary
-    document.querySelectorAll('.time-filter-btn').forEach(button => {
-        button.addEventListener('click', () => {
-            // Update active state
-            document.querySelectorAll('.time-filter-btn').forEach(btn => 
-                btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            // Filter data by selected period
-            const period = button.getAttribute('data-period');
-            filterProgressByPeriod(period);
+    try {
+        // Time filter buttons
+        document.querySelectorAll('.time-filter-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.time-filter-btn').forEach(btn => 
+                    btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Filter data by selected period
+                const period = button.getAttribute('data-period');
+                console.log(`Filtering by period: ${period}`);
+                
+                if (typeof filterProgressByPeriod === 'function') {
+                    filterProgressByPeriod(period);
+                } else {
+                    console.log(`Would filter by period: ${period} (function not available)`);
+                }
+            });
         });
-    });
-    
-    // Calendar day clicks for activity details
-    document.querySelectorAll('.calendar-day[data-count]').forEach(day => {
-        const count = parseInt(day.dataset.count);
-        if (count > 0) {
-            day.addEventListener('click', () => {
-                showDayActivityDetails(day.dataset.date, count);
+        
+        // Add goal button
+        const addGoalBtn = document.getElementById('add-goal-btn');
+        if (addGoalBtn) {
+            addGoalBtn.addEventListener('click', () => {
+                if (typeof openGoalModal === 'function') {
+                    openGoalModal();
+                } else {
+                    console.log('Would open goal modal (function not available)');
+                }
             });
         }
-    });
-    
-    // Badge clicks for details
-    document.querySelectorAll('.badge-item').forEach(badge => {
-        badge.addEventListener('click', () => {
-            const badgeId = badge.dataset.badgeId;
-            const badgeData = {
-                id: badgeId,
-                name: badge.querySelector('.badge-name').textContent,
-                description: badge.querySelector('.badge-description').textContent,
-                icon: badge.querySelector('.badge-icon').textContent
-            };
-            showBadgeDetails(badgeData, badge.classList.contains('earned'));
+        
+        // Leaderboard filter buttons
+        document.querySelectorAll('.leaderboard-filter-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.leaderboard-filter-btn').forEach(btn => 
+                    btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Load selected leaderboard
+                const scope = button.getAttribute('data-scope');
+                if (typeof loadLeaderboard === 'function') {
+                    loadLeaderboard(scope);
+                } else {
+                    console.log(`Would load ${scope} leaderboard (function not available)`);
+                }
+            });
         });
-    });
-    
-    // Weak area study buttons
-    document.querySelectorAll('.weak-area-action-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent parent elements from receiving the click
-            const topic = button.getAttribute('data-topic');
-            navigateToStudyMaterial(topic);
-        });
-    });
-    
-    // Leaderboard filter buttons (re-attach in case they were dynamically created)
-    document.querySelectorAll('.leaderboard-filter-btn').forEach(button => {
-        button.removeEventListener('click', handleLeaderboardFilter); // Remove existing to prevent duplicates
-        button.addEventListener('click', handleLeaderboardFilter);
-    });
-    
-    // Goal related buttons
-    const addGoalBtn = document.getElementById('add-goal-btn');
-    if (addGoalBtn) {
-        addGoalBtn.removeEventListener('click', openGoalModal); // Remove existing to prevent duplicates
-        addGoalBtn.addEventListener('click', () => openGoalModal());
+    } catch (error) {
+        console.error('Error setting up event listeners:', error);
     }
-    
-    // Goal edit buttons
-    document.querySelectorAll('.goal-edit-btn').forEach(button => {
-        button.removeEventListener('click', handleGoalEdit); // Remove existing to prevent duplicates
-        button.addEventListener('click', handleGoalEdit);
-    });
-    
-    // Goal delete buttons
-    document.querySelectorAll('.goal-delete-btn').forEach(button => {
-        button.removeEventListener('click', handleGoalDelete); // Remove existing to prevent duplicates
-        button.addEventListener('click', handleGoalDelete);
-    });
-    
-    // Goal items (for showing details)
-    document.querySelectorAll('.goal-item').forEach(item => {
-        item.removeEventListener('click', handleGoalClick); // Remove existing to prevent duplicates
-        item.addEventListener('click', handleGoalClick);
-    });
-    
-    // Analytics tab buttons
-    document.querySelectorAll('.analytics-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabs = document.querySelectorAll('.analytics-tab');
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            const panels = document.querySelectorAll('.analytics-panel');
-            panels.forEach(p => p.classList.remove('active'));
-            
-            const panelId = `${tab.dataset.tab}-panel`;
-            const panel = document.getElementById(panelId);
-            if (panel) panel.classList.add('active');
-            
-            // Load data if needed
-            loadAnalyticsData(tab.dataset.tab);
-        });
-    });
-    
-    // Quiz details buttons
-    document.querySelectorAll('.quiz-details-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const quizId = button.getAttribute('data-quiz-id');
-            loadQuizDetails(quizId);
-        });
-    });
 }
 
 // Helper functions for event handlers
